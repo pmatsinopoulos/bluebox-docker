@@ -53,9 +53,6 @@ fi
 read -p "Host port [${SUGGESTED_PORT}]: " PG_PORT
 PG_PORT=${PG_PORT:-$SUGGESTED_PORT}
 
-read -p "Host port [${DEFAULT_PORT}]: " PG_PORT
-PG_PORT=${PG_PORT:-$DEFAULT_PORT}
-
 # Validate port
 if [[ ! "$PG_PORT" =~ ^[0-9]+$ ]] || [ "$PG_PORT" -lt 1024 ] || [ "$PG_PORT" -gt 65535 ]; then
     echo "Error: Port must be a number between 1024 and 65535."
