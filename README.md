@@ -99,16 +99,16 @@ docker pull ghcr.io/ryanbooz/bluebox-postgres:19-dev
 
 When the initial container starts, it will backfill any days that do not have rental data from the last known rental until "yesterday". There are `pg_cron` jobs that create new rental data every 5 minutes starting with "now". As long as the container is running, you should continue to get new rental data every 5 minutes.
 
-However, there may be times where the container is shut down for multiple days and you'd like to get it "caught up" to today. 
+However, there may be times where the container is shut down for multiple days and you'd like to get it "caught up" to today. Or, maybe you want to create a few years of historical data so that there are more than a few million rows in the `rental` and `payment` tables to make data analysis more interesting.
 
-To fill the gap between the last rental and today, connect to the database with `psql` or your IDE of choice, and run the following:
+To fill the gap between the any two dates, connect to the database with `psql` or your IDE of choice, and run the following command. Please note, the `bluebox.generate_rental_history()` procedure will only allow you to create up to 366 days of data at a time.
 
 ```bash
 # Or manually
 docker exec -it bluebox-18 psql -U bb_admin -d bluebox -c "
     CALL bluebox.generate_rental_history(
         p_start_date := '2026-01-15'::date,  -- adjust to day after last rental
-        p_end_date := CURRENT_DATE - 1,
+        p_end_date := CURRENT_DATE - 1,  -- can be a specific date as well
         p_print_debug := true
     );
 "
