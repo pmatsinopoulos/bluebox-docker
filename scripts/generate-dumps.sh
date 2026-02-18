@@ -41,24 +41,50 @@ mkdir -p "$OUTPUT_DIR"
 # 03 - Schema (structure only, no privileges/ownership)
 echo "Dumping schema..."
 {
-    printf '%s\n' '\c bluebox bluebox_admin'
+    printf '%s\n' '\c bluebox postgres'
     printf '\n%s\n\n' "\\echo '=== Creating schema ==='"
     pg_dump -h "$PGHOST" -p "$PGPORT" -U "$DB_USER" -d "$DB_NAME" \
         --schema-only -x -O
 } > "$OUTPUT_DIR/03-schema.sql"
-# Comment out transaction_timeout (PG 17+ only)
-if grep -q '^SET transaction_timeout = 0;' "$OUTPUT_DIR/03-schema.sql"; then
-    awk '{
-        if ($0 == "SET transaction_timeout = 0;") {
-            print "-- transaction_timeout is a PG 17+ parameter and not necessary for init scripts"
-            print "-- SET transaction_timeout = 0;"
-        } else {
-            print $0
-        }
-    }' "$OUTPUT_DIR/03-schema.sql" > "$OUTPUT_DIR/03-schema.sql.tmp"
-    mv "$OUTPUT_DIR/03-schema.sql.tmp" "$OUTPUT_DIR/03-schema.sql"
-    echo "  ✓ Commented out transaction_timeout"
-fi
+
+# Post-process the schema dump:
+#   - Comment out transaction_timeout (PG 17+ only)
+#   - Inject SET ROLE bluebox_admin after each SET block (so objects get correct ownership)
+#   - Inject SET ROLE postgres before extensions (need superuser for CREATE EXTENSION)
+awk '
+BEGIN { set_block = 0; seen_extension = 0 }
+{
+    # Comment out transaction_timeout
+    if ($0 == "SET transaction_timeout = 0;") {
+        print "-- transaction_timeout is a PG 17+ parameter and not necessary for init scripts"
+        print "-- SET transaction_timeout = 0;"
+        next
+    }
+
+    # Before first CREATE EXTENSION, switch to superuser
+    if (/^CREATE EXTENSION/ && !seen_extension) {
+        seen_extension = 1
+        print "-- Connect as superuser for extension creation"
+        print "SET ROLE postgres;"
+        print ""
+    }
+
+    print $0
+
+    # After each SET row_security = off, inject SET ROLE bluebox_admin
+    if ($0 == "SET row_security = off;") {
+        set_block++
+        print ""
+        print "-- Set the role to bluebox_admin for schema and object creation"
+        print "-- This ensures all objects are owned by bluebox_admin and all of"
+        print "-- the necessary permissions are applied for bluebox_app through default privileges."
+        print "SET ROLE bluebox_admin;"
+    }
+}
+' "$OUTPUT_DIR/03-schema.sql" > "$OUTPUT_DIR/03-schema.sql.tmp"
+mv "$OUTPUT_DIR/03-schema.sql.tmp" "$OUTPUT_DIR/03-schema.sql"
+
+echo "  ✓ Injected SET ROLE statements for correct object ownership"
 echo "  → 03-schema.sql"
 
 # 04 - Reference data (small tables, full dump)

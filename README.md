@@ -8,7 +8,7 @@ A PostgreSQL sample database simulating a video rental kiosk business (think Red
 - **Continuous data generation**: pg_cron jobs create new rentals every 5 minutes
 - **Geographic data**: PostGIS-enabled with store/customer locations
 - **Customer lifecycle**: Churn, reactivation, and status tracking
-- **Multiple PostgreSQL versions**: 15, 16, 17, 18, and 19-dev (built from master)
+- **Multiple PostgreSQL versions**: 14, 15, 16, 17, 18, and 19-dev (built from master)
 - **Multi-architecture**: AMD64 and ARM64 (native Apple Silicon support)
 - **Pre-loaded extensions**: PostGIS, pg_stat_statements, hypopg, pgvector, TimescaleDB, and more
 
@@ -73,6 +73,7 @@ All containers will run independently with their own data volumes.
 | `17` | 17.x | Stable | amd64, arm64 |
 | `16` | 16.x | Stable | amd64, arm64 |
 | `15` | 15.x | Stable | amd64, arm64 |
+| `14` | 14.x | Stable | amd64, arm64 |
 | `19-dev`, `dev` | master | Development | amd64, arm64 |
 
 Pull directly:

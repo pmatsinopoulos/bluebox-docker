@@ -87,9 +87,26 @@ wait_for_ready() {
     local container="$1"
     local max_wait=360
     local waited=0
-    echo -n "Waiting for database to be ready "
+    local seen_scripts=""
+
+    echo "Waiting for database to be ready..."
     while [ $waited -lt $max_wait ]; do
         status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "starting")
+
+        # Show init script progress from container logs
+        for script in $(docker logs "$container" 2>&1 \
+            | grep -o '[a-z]*ing /docker-entrypoint-initdb.d/[^ ]*' \
+            | sed 's|.*/docker-entrypoint-initdb.d/||' \
+            || true); do
+            case "$seen_scripts" in
+                *"|${script}|"*) ;;  # already shown
+                *)
+                    seen_scripts="${seen_scripts}|${script}|"
+                    echo "  → Running ${script}"
+                    ;;
+            esac
+        done
+
         case "$status" in
             healthy)
                 echo ""
@@ -103,7 +120,6 @@ wait_for_ready() {
                 return 1
                 ;;
             *)
-                echo -n "."
                 sleep 3
                 waited=$((waited + 3))
                 ;;

@@ -61,7 +61,7 @@ log_info "Installing PostgreSQL ${PG_VERSION} and extensions..."
 
 docker build \
     --build-arg PG_SERVER_VERSION=${PG_VERSION} \
-    -t bluebox-${PG_VERSION}:latest \
+    -t bluebox:${PG_VERSION} \
     . 2>&1 | tee /tmp/bluebox-build.log
 
 # Check if build actually succeeded by exit code, not by grepping for "error"
@@ -71,17 +71,17 @@ if [ ${PIPESTATUS[0]} -ne 0 ]; then
 fi
 
 # Check if build actually succeeded
-if ! docker image inspect bluebox-${PG_VERSION}:latest > /dev/null 2>&1; then
+if ! docker image inspect bluebox:${PG_VERSION} > /dev/null 2>&1; then
     log_error "Build failed - image not found!"
     exit 1
 fi
 
-log_success "Image built successfully: bluebox-${PG_VERSION}:latest"
+log_success "Image built successfully: bluebox:${PG_VERSION}"
 echo ""
 
-# Step 3: Start the container
+# Step 3: Start the container using the locally built image
 log_info "Step 3: Starting container..."
-docker-compose up -d
+BLUEBOX_IMAGE=bluebox docker-compose up -d
 log_success "Container started"
 echo ""
 
@@ -107,12 +107,27 @@ echo ""
 
 # Step 5: Wait for initialization and check CSV loading
 log_info "Step 5: Waiting for data initialization to complete..."
-MAX_INIT_WAIT=90
+MAX_INIT_WAIT=180
 INIT_SECONDS_WAITED=0
 RENTAL_LOG=""
 PAYMENT_LOG=""
 
+SEEN_SCRIPTS=""
 while [ $INIT_SECONDS_WAITED -lt $MAX_INIT_WAIT ]; do
+    # Show init script progress from container logs
+    for script in $(docker logs "$CONTAINER_NAME" 2>&1 \
+        | grep -o '[a-z]*ing /docker-entrypoint-initdb.d/[^ ]*' \
+        | sed 's|.*/docker-entrypoint-initdb.d/||' \
+        || true); do
+        case "$SEEN_SCRIPTS" in
+            *"|${script}|"*) ;;  # already shown
+            *)
+                SEEN_SCRIPTS="${SEEN_SCRIPTS}|${script}|"
+                log_info "  Running ${script}"
+                ;;
+        esac
+    done
+
     # Check for both CSV load messages
     RENTAL_LOG=$(docker-compose logs 2>&1 | grep "Loaded .* rental records from CSV" || echo "")
     PAYMENT_LOG=$(docker-compose logs 2>&1 | grep "Loaded .* payment records from CSV" || echo "")
