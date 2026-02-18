@@ -7,9 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-18
+
+### Fixed
+- Object ownership: schema objects are now correctly owned by `bluebox_admin`,
+  ensuring `bb_app` gets proper permissions via DEFAULT PRIVILEGES
+
+### Changed
+- `test-build.sh` automatically uses the locally built image via `BLUEBOX_IMAGE`
+  env var (no more forgetting to switch docker-compose.yaml)
+- `generate-dumps.sh` auto-injects `SET ROLE` statements into the schema dump
+  for correct object ownership
+- `start.sh` shows init script progress during startup instead of only dots
+- `test-build.sh` shows init script progress during data load verification
+- `docker-compose.yaml` image is now configurable via `BLUEBOX_IMAGE` env var
+  (defaults to `ghcr.io/ryanbooz/bluebox-postgres`, no change for existing users)
+
+## [1.0.0] - 2026-02-10
+
 ### Added
-- Initial release of Bluebox Docker
-- Support for PostgreSQL versions 15, 16, 17, and 18
+- Initial public release of Bluebox Docker
+- Support for PostgreSQL versions 14, 15, 16, 17, and 18
 - PostgreSQL 19-dev (master branch) development build support
 - Pre-loaded sample data: films, customers, stores, inventory, rentals, payments
 - Automated data generation via pg_cron (rentals every 5 minutes)
@@ -27,22 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - hll for HyperLogLog cardinality estimation
   - postgresql_anonymizer for data anonymization
 - Multi-architecture support (amd64, arm64)
-- Comprehensive test scripts for build validation
-- CSV data loading from compressed files during initialization
-- Cross-version compatibility fixes for PostgreSQL 15-19
-
-### Technical Details
-- Dockerfile for stable PostgreSQL releases (15-18)
-- Dockerfile.dev for building from PostgreSQL master branch
-- Automated init scripts for database setup and data loading
-- Helper scripts: backfill.sh, generate-dumps.sh, test-build.sh, test-build-dev.sh
-- Optimized checkpoint configuration for faster data loads
 - Role-based access control (bb_admin, bb_app, postgres)
+- Interactive `start.sh` launcher with version/port selection
+- `dev.sh` for long-lived development instances
+- CSV data loading from compressed files during initialization
+- Comprehensive test scripts for build validation
 
-## [1.0.0] - YYYY-MM-DD
-
-### Note
-Version 1.0.0 will be tagged upon first release to GitHub Container Registry.
-
-[Unreleased]: https://github.com/ryanbooz/bluebox-docker/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ryanbooz/bluebox-docker/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ryanbooz/bluebox-docker/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ryanbooz/bluebox-docker/releases/tag/v1.0.0
